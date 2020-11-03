@@ -32,6 +32,7 @@ New PDS member selection commands
 9. Update bugs in ZIGICNVT (CONVREPO command). It is still not prefect but
    it is better. Now creates a .gitattributes if one does not exist and
    supports files with $ in the name.
+10. Fixed incorrect tagging for untagged files with updates from Filipe Meireles
 
 =============================================================================
                              ZIGI Release Notes
