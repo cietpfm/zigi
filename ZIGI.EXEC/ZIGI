@@ -3067,7 +3067,6 @@ WWRF_handle_lcmd_s:
     copycmd = copycmd || "/"r
     x = do_copy(copycmd)
     if x > 0 then call view_std 'B'
-    x = debug('Copy:' copycmd)
     if strip(binopt''cplmod) /= null then do
       tagcmd = 'chtag -b 'localrep'/'zigirep'/'r
       x = docmd(tagcmd)
@@ -6486,7 +6485,6 @@ Update_repo_metadata:
             call do_popup3
             x = do_copy(copycmd)
             if x > 0 then call view_std 'B'
-            x = debug('Copy:' copycmd)
             if strip(binopt''cplmod) /= null then do
               tagcmd = 'chtag -b 'localrep'/'zigirep'/'r'/'rm
               x = docmd(tagcmd)
@@ -6570,7 +6568,6 @@ Update_repo_metadata:
             copycmd = copycmd || "/"r
             x = do_copy(copycmd)
             if x > 0 then call view_std 'B'
-            x = debug('Copy:' copycmd)
             if strip(binopt''cplmod) /= null then do
               tagcmd = 'chtag -b 'localrep'/'zigirep'/'r
               x = docmd(tagcmd)
@@ -7227,7 +7224,6 @@ Do_Add_Copy:
       copycmd = "//'"pdsc"'"
       copycmd = '"'copycmd'"'
       cmd = "cp -v "binopt extopt cplmod copycmd" "DIR"/"pdss"/"ac_mem
-      x = debug('Copying:' cmd)
       x =do_copy(cmd)
       call bpxwdyn "free  fi("|| ddname ||")"
     end
@@ -7264,7 +7260,6 @@ Do_Add_Copy:
         copycmd = "//'"pdsc"'"
         copycmd = '"'copycmd'"'
         cmd = "cp -U -v "binopt cplmod copycmd" "dir"/"pdss"/"ussmem
-        x = debug('Copying:' cmd)
         x =do_copy(cmd)
       end
       call bpxwdyn "free  fi("|| ddname ||")"
@@ -7308,7 +7303,6 @@ Do_Add_Copy:
     copycmd = "//'"W"'"
     copycmd = '"'copycmd'"'
     copycmd = "cp -U -v "binopt copycmd" "DIR"/"pss
-    x = debug('Copying:' copycmd)
     x =do_copy(copycmd)
     if translate(option) = 'BINARY' then do
       /* for some reason the git autotagging due to .gitattributes
@@ -8843,8 +8837,14 @@ do_copy:
   | If enhance cp is not enabled or if the cp is for a load |
   | module then do normal cp                                |
   * ------------------------------------------------------- */
-    x = docmd(cp_cmd)
-    return x
+  if wordpos('-B', cp_cmd) = 0 & wordpos('-X', cp_cmd) = 0 then do
+    /* Specify that the data to be copied is text */
+    cp_pos = wordindex(cp_cmd, wordpos('cp', cp_cmd))
+    cp_cmd = insert('-T ', cp_cmd, cp_pos + 2)
+    end
+  x = debug('Copy:' cp_cmd)
+  x = docmd(cp_cmd)
+  return x
 
 Get_Ignored:
   cmd = 'cat' localrep'/'zigirep'/.gitignore'

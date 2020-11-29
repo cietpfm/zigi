@@ -407,7 +407,7 @@ Alloc_Copy_PDS:
       type = 'Binary'
     end
     else do
-      binopt = null
+      binopt = '-T'
       type = 'Text'
     end
     if recfm = 'U' then do
@@ -439,7 +439,7 @@ Alloc_Copy_PDS:
       src = rdir'/'mems.ii
       bin = is_binfile(sub'/'mems.ii)
       if bin = 1 then binopt = '-B'
-      else binopt = null
+      else binopt = '-T'
       if recfm = 'U' then binopt = '-X -I'
       Select
         when pos('-B',binopt) > 0 then type = 'Binary'
