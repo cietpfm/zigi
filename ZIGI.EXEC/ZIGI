@@ -5125,12 +5125,10 @@ Git_Add_Member:
 
   d = usssafe(dsn)
 
-  if pos('.',mem) = 0 then do
-    if extension \= null then do
+  if extension \= null & pos('.',mem) = 0 then do
       /* so we have an extension, better add correctly */
       toadd = usssafe(lower(usssafe(mem))'.'extension)
     end
-  end
   else do
     /* regular add */
     toadd = usssafe(mem)
