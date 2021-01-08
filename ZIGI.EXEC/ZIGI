@@ -5126,9 +5126,9 @@ Git_Add_Member:
   d = usssafe(dsn)
 
   if extension \= null & pos('.',mem) = 0 then do
-      /* so we have an extension, better add correctly */
-      toadd = usssafe(lower(usssafe(mem))'.'extension)
-    end
+    /* so we have an extension, better add correctly */
+    toadd = usssafe(lower(usssafe(mem))'.'extension)
+  end
   else do
     /* regular add */
     toadd = usssafe(mem)
@@ -7341,8 +7341,7 @@ Do_Add_Copy:
   * ------------------------------------------------------- */
 save_dsninfo:
   /* make sure we aren't saving a member with dsname */
-  parse value dsn with dx'/'dy
-  if pos('.',dy) > 0 then return
+  if pos('/',dsn) > 0 then return
   /* better make sure sd. stem is empty before we start :) */
   sd. = ''
   sd.0 = 0
