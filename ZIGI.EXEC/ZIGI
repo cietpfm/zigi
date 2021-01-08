@@ -3599,6 +3599,7 @@ Stash_IT:
   'display panel(zigipop)'
   'rempop'
   call pfshow 'reset'         /* restore pfshow setting */
+  call auto_tag_files localrep'/'zigirep, '.'
   cmd = 'cd' localrep'/'zigirep
   cmd = cmd '&& git stash push -a -u -m "'date() time() stashmsg'"'
   cmd = cmd '&& git stash show'
@@ -8885,21 +8886,21 @@ Auto_Tag_Files:
 Auto_Tag_File:
   parse arg atf_dir, atf_file
   attr_cmd = 'cd' atf_dir
-  attr_cmd = attr_cmd '&& git check-attr -a' atf_file
-  attr_cmd = attr_cmd '| grep -q "binary: set"'
+  /* query the text attribute since the binary attribute is a macro */
+  attr_cmd = attr_cmd '&& git check-attr',
+    'text zos-working-tree-encoding --' atf_file
   x = docmd(attr_cmd)
-  if so.0 /= 0 then do
-     cht_cmd = 'cd' atf_dir
-     cht_cmd = cht_cmd '&& chtag -b' atf_file
-     x = docmd(cht_cmd)
-     return
-     end
-  attr_cmd = 'cd' atf_dir
-  attr_cmd = attr_cmd '&& git check-attr -a' atf_file
-  attr_cmd = attr_cmd '| grep "zos-working-tree-encoding"'
-  x = docmd(attr_cmd)
-  parse value so.1 with . 'encoding:' xx'-'codepage
-  cht_cmd = 'cd' atf_dir
-  cht_cmd = cht_cmd '&& chtag -tc' codepage atf_file
-  x = docmd(cht_cmd)
+  info = word(so.1, 3)  
+  if info = 'unset' then do
+    cht_cmd = 'cd' atf_dir
+    cht_cmd = cht_cmd '&& chtag -b' atf_file
+    x = docmd(cht_cmd)
+    return
+    end
+  codepage = word(so.2, 3)  
+  if codepage /= 'unspecified' then do
+    cht_cmd = 'cd' atf_dir
+    cht_cmd = cht_cmd '&& chtag -tc' codepage atf_file
+    x = docmd(cht_cmd)
+    end
   return
