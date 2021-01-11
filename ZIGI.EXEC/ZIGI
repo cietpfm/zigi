@@ -3910,9 +3910,9 @@ Do_Stash_Pop:
 
 Git_Clean_Check:
   lcmd = 'cd' localrep'/'zigirep
-  cmd = lcmd '&& git status'
+  cmd = lcmd '&& git status -s'
   x = docmd(cmd)
-  if so.0 = 2 then return 0
+  if so.0 = 0 then return 0
   return 1
 
   /* -------------------------------------- *
