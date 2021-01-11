@@ -5128,9 +5128,9 @@ Git_Add_Member:
 
   d = usssafe(dsn)
 
-  if extension \= null then do
+  if extension \= null & pos('.',mem) = 0 then do
     /* so we have an extension, better add correctly */
-    toadd = lower(usssafe(mem))'.'extension
+    toadd = usssafe(lower(usssafe(mem))'.'extension)
   end
   else do
     /* regular add */
@@ -5142,6 +5142,7 @@ Git_Add_Member:
   call git_safe_add repodir, d'/'toadd, add_force
   if se.0 > 0 then
   call view_std 'B'
+  parse value mem with mem'.'.
   call update_mem_stats d'/'toadd mem
   zigi_changed = 1
   return
@@ -7336,6 +7337,8 @@ Do_Add_Copy:
   | the extension is optional - no preceeding period        |
   * ------------------------------------------------------- */
 save_dsninfo:
+  /* make sure we aren't saving a member with dsname */
+  if pos('/',dsn) > 0 then return
   /* better make sure sd. stem is empty before we start :) */
   sd. = ''
   sd.0 = 0
