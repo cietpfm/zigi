@@ -1800,8 +1800,7 @@ WWR_handle_merge:
   | Show the network graph            |
   * -------------------------------- */
 WWR_handle_network:
-  cmd = 'cd' localdir' && git log --graph --oneline'
-  cmd = cmd '--format="%h %<(50,trunc)%f"'
+  cmd = 'cd' localdir' && git log --graph --oneline --decorate | cut -c -72'
   x = docmd(cmd)
   vtype = 'graph'
   'vput (vtype) shared'
