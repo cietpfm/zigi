@@ -5651,9 +5651,9 @@ Merge_it:
         mhit = 0
         do im = 1 to so.0
           if word(so.im,1) /= 'CONFLICT' then iterate
+          zcmd = 2
           if pos('.zigi/',so.im) = 0  then do
             mhit = 1
-            zcmd = 2
             leave
           end
         end
