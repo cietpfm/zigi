@@ -5844,6 +5844,16 @@ Merge_it:
           zsel = null
           if zmcount = 0 then do
             call do_merge_conflict_rms
+            if fix_stats /= null
+            then do fs = 1 to words(fix_stats)
+              sfile = usssafe(word(fix_stats,fs))
+              wfile = translate(word(fix_stats,fs),' ','/')
+              wfile = subword(wfile,words(wfile))
+              pds = usssafe(pdshlqt'.'wfile)
+              Address TSO '%zigistat' "'"pds"'" sfile 'S'
+              x = docmd('cd' localrep'/'zigirep '&& git add' sfile)
+              if x > 0 then call view_std 'B'
+            end
             cmd = 'cd' mrgdir '&& git commit -m "Resolve merge conflicts"'
             x = docmd(cmd)
             Report_Header = 'Merge Report'
@@ -5855,16 +5865,6 @@ Merge_it:
             end
             so.0 = save_so.0
             call check_delta
-            if fix_stats /= null
-            then do fs = 1 to words(fix_stats)
-              sfile = usssafe(word(fix_stats,fs))
-              wfile = translate(word(fix_stats,fs),' ','/')
-              wfile = subword(wfile,words(wfile))
-              pds = usssafe(pdshlqt'.'wfile)
-              Address TSO '%zigistat' "'"pds"'" sfile 'S'
-              x = docmd('cd' localrep'/'zigirep '&& git add' sfile)
-              if x > 0 then call view_std 'B'
-            end
             call update_repo_metadata
           end
           else do
