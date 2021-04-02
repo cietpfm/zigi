@@ -5441,9 +5441,6 @@ Branch_it:
       else do
         localdir = localrep'/'zigirep
         x = docmd('cd 'localdir' && git checkout -b 'newb)
-        /* TODO only do this when there is a remote? */
-        if zigi_offline = 0 then
-        x = docmd('cd 'localdir' && git push -u origin 'newb)
         branch = newb
         leave
       end
