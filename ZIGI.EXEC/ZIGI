@@ -4821,7 +4821,7 @@ Do_Commit:
     cmd = cmd '&& git commit -F' file
     if zigi_offline = 0 then
     if zpush = 'Y' then
-    cmd = cmd '&& git push -v'
+    cmd = cmd '&& git push -vu origin HEAD'
     cmd = cmd '&& rm' file
     x = docmd(cmd)
     call add_combine cmd
@@ -4837,7 +4837,7 @@ Do_Commit:
     cmd = cmd "&& git commit -vm '"cmsg.1"'"
     if zigi_offline = 0 then
     if zpush = 'Y' then
-    cmd = cmd '&& git push -v'
+    cmd = cmd '&& git push -vu origin HEAD'
     x = docmd(cmd)
     call add_combine cmd
     call combine_msgs
@@ -4989,7 +4989,7 @@ fixup_userids:
 Do_Push:
   arg opt
   call pop 'Pushing Updates to Remote Git'
-  cmd = 'cd' localdir' && git push -v'
+  cmd = 'cd' localdir' && git push -vu origin HEAD'
   x = docmd(cmd)
   if x > 0 then do
     call view_std 'B'
