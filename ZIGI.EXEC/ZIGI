@@ -7920,10 +7920,9 @@ do_history:
     parse value zigirep with x'/'zrep
     element = zrep'/'element
   end
-  cmd = 'cd' localrep'/'zigirep
-  cmd = cmd '&& git log --cc -m -n 9999 --unified=1'
-  cmd = cmd "--pretty=format:'commit:%h Date:%cD Subject:%f' --name-only" ,
-    '| grep -e commit -e' usssafe(element)
+  cmd = 'cd' localrep'/'zigirep '&& git log'
+  cmd = cmd "--pretty=format:'commit:%h Date:%cD Subject:%f'"
+  cmd = cmd '--' usssafe(element)
   x = docmd(cmd)
   hhit = 0
   hist_tbl = 'ZHIST'random(999)
