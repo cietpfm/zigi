@@ -5606,37 +5606,266 @@ Merge_it:
     | Checkout the selected bname   |
     * ----------------------------- */
     if zsel = "M" then do
-      /* ----------------------------------------- */
-      /* Get the delta of the elements between the */
-      /* branches being merged.                    */
-      /* ----------------------------------------- */
-      cmd = 'cd 'localdir
-      cmd = cmd '&& git diff --name-status' branch'..'bname
-      x = docmd(cmd)
-      /* save the delta info for future use */
-      drop save_so.
-      do mi = 1 to so.0
-        save_so.mi = so.mi
-      end
-      save_so.0 = so.0
-      /* ----------------------------------------- */
-      cmd = 'cd 'localdir' && git merge --no-commit --no-ff'
-      cmd = cmd || ' refs/heads/'bname
-      x = docmd(cmd)
-      if so.1 = 'Already up-to-date.' then do
-        /* No need to merge! */
-        zs1 = "Merge not needed"
-        zs2 = "Branches are the same"
-        zs3 = ""
-        zs4 = "Press Enter/F3 to continue"
-        call do_popup4p
+      call do_merge
+      leave
+    end
+  end
+  'tbend' rtbm
+  ztdsels = 1
+  zsel = null
+  return
+
+Do_Merge:
+  /* ----------------------------------------- */
+  /* Get the delta of the elements between the */
+  /* branches being merged.                    */
+  /* ----------------------------------------- */
+  cmd = 'cd 'localdir
+  cmd = cmd '&& git diff --name-status' branch'..'bname
+  x = docmd(cmd)
+  /* save the delta info for future use */
+  drop save_so.
+  do mi = 1 to so.0
+    save_so.mi = so.mi
+  end
+  save_so.0 = so.0
+  /* ----------------------------------------- */
+  cmd = 'cd 'localdir' && git merge --no-commit --no-ff'
+  cmd = cmd || ' refs/heads/'bname
+  x = docmd(cmd)
+  if so.1 = 'Already up-to-date.' then do
+    /* No need to merge! */
+    zs1 = "Merge not needed"
+    zs2 = "Branches are the same"
+    zs3 = ""
+    zs4 = "Press Enter/F3 to continue"
+    call do_popup4p
+    return
+  end
+  parse var se.1 "Automatic merge went well; stopped" rest
+  if rest /= "" then do
+    /* No issues. Commit the merge then execute a Replace */
+    /* Maybe popup a panel here for the commit message? */
+    x = docmd('cd 'localdir' && git commit -m "Merge 'bname'"')
+    Report_Header = 'Merge Report'
+    delta_from = bname
+    delta_to   = branch
+    drop so.
+    do mi = 1 to save_so.0
+      so.mi = save_so.mi
+    end
+    so.0 = save_so.0
+    call check_delta
+  end
+  else do
+    mhit = 0
+    do im = 1 to so.0
+      if word(so.im,1) /= 'CONFLICT' then iterate
+      zcmd = 2
+      if pos('.zigi/',so.im) = 0  then do
+        mhit = 1
         leave
       end
-      parse var se.1 "Automatic merge went well; stopped" rest
-      if rest /= "" then do
-        /* No issues. Commit the merge then execute a Replace */
-        /* Maybe popup a panel here for the commit message? */
-        x = docmd('cd 'localdir' && git commit -m "Merge 'bname'"')
+    end
+    /* Merge went fubar */
+    if mhit = 1 then
+    do forever
+      zcmd = null
+      call pfshow 'off'           /* make sure pfshow is off */
+      'Addpop row(4) column(6)'
+      'Display Panel(zigimrgq)'
+      drc = rc
+      'Rempop'
+      call pfshow 'reset'         /* restore pfshow setting */
+      if drc > 0 then leave
+      if zcmd > 0 then leave
+      if zcmd = 0 then do
+        zerrsm = null
+        zerrlm = 'Issues with .zigi/xxx files can be ignored as they' ,
+          'will be handled automatically by ZIGI.'
+        'setmsg msg(isrz003)'
+        call view_std 'V'
+      end
+    end
+    if drc > 0 then zcmd = 3
+    if zcmd = 3 then do
+      cmd = 'cd' localdir
+      cmd = cmd '&& git merge --abort'
+      x = docmd(cmd)
+      zerrsm = 'Canceled.'
+      zerrlm = "Merge canceled and git merge --abort executed."
+      'setmsg msg(isrz003)'
+    end
+    mrgtype = zcmd
+    if zcmd = 2 then zcmd = 1
+    /* --------------------------------------------------------------- *
+    | If option 1 then setup for the user to resolve the conflicts    |
+    | using ispf edit.                                                |
+    |                                                                 |
+    | 1. parse merge conflict messages for the merge files            |
+    | 2. if a file is a PDS then process then add the file name       |
+    |    to fix_stats for later and edit to retain only merge records |
+    | 3. display the files for selection and correction               |
+    | 4. if ALL files have been resolved (edit saved) then            |
+    |    process any fix_stats files:                                 |
+    |    - run zigistat 'S'                                           |
+    |    - git add it                                                 |
+    |                                                                 |
+    | If option 1 then don't do any processing just display the       |
+    | files for editing and manual resolution.  But still fix the     |
+    | ISPF stats files                                                |
+    * --------------------------------------------------------------- */
+    if zcmd = 1 then do
+      pdshlqt = translate(pdshlq,' ','.')
+      if qualignr > 0 then
+      pdshlqt = subword(pdshlqt,1,qualignr)
+      pdshlqt = translate(pdshlqt,'.',' ')
+      parse value '' with dsntbl mstat
+      zmergtbl = 'ZG'time('s')
+      zmcount = 0
+      fix_stats = null
+      'TBCreate' zmergtbl 'Keys(mdsn)' ,
+        'Names(mfile mstat) nowrite share'
+      mrgdir = localrep'/'zigirep
+      merge_rms = null
+      do si = 1 to so.0
+        mem = null
+        if word(so.si,1) /= 'CONFLICT' then iterate
+        Select
+          When pos('rename/',word(so.si,2)) > 0 then
+          parse value so.si with . '->'mdsn .
+          When pos('/delete',word(so.si,2)) > 0 then do
+            parse value so.si with . 'Version'. 'of' mdsn .
+            merge_rms = merge_rms mdsn
+            iterate
+          end
+          When pos('modify/',word(so.si,2)) > 0 then
+          parse value so.si with . 'Version'. 'of' mdsn .
+          Otherwise
+          parse value so.si with 'CONFLICT' . 'in' mdsn .
+        End
+        mfile = mrgdir'/'mdsn
+        if mdsn /= '.zigi/dsn' then
+        if left(mdsn,6) = '.zigi/' then do
+          if pos(mfile,fix_stats) = 0 then
+          fix_stats = fix_stats mfile
+          parm = 'M'
+          'vput (mrgdir mdsn mfile) shared'
+          'Edit file(mfile) macro(zigimrgm) parm(parm)'
+          iterate
+        end
+        if wordpos(mdsn,dsntbl) > 0
+        then do
+          'tbmod' zmergtbl
+        end
+        else do
+          'tbadd' zmergtbl
+          dsntbl = dsntbl mdsn
+          zmcount = zmcount + 1
+        end
+      end
+      if zmcount = 0 then do
+        zs1 = 'Merge conflicts will be automatically resolved,'
+        zs2 = 'issues with ISPF Stat Files only.'
+        call do_popup
+      end
+      ztdsels = 0
+      ztdtop = 1
+      zsel = null
+      file_changed = 0
+      drop so. se.
+      'tbtop' zmergtbl
+      'tbsort' zmergtbl 'fields(mdsn,c,a)'
+      if zmcount > 0 then
+      do forever
+        if ztdsels > 1
+        then 'tbdispl' zmergtbl
+        else do
+          'tbtop' zmergtbl
+          'tbskip' zmergtbl 'number('ztdtop')'
+          'tbdispl' zmergtbl 'panel(zigimrds)'
+        end
+        if rc > 4 then leave
+        if zsel = null then iterate
+        if row /= null then do
+          'tbtop' zmergtbl
+          'tbskip' zmergtbl  'number('row')'
+        end
+        if zsel = '/' then do
+          call pfshow 'off'           /* make sure pfshow is off */
+          'Addpop row(4) column(6)'
+          'Display Panel(zigirmrg)'
+          'rempop'
+          call pfshow 'reset'         /* restore pfshow setting */
+        end
+
+        if ztdsels = 0 then
+        if pnsdef = 'P' then do
+          if row = 0 then zcmd = 'O'
+          if row > 0 then zsel = '/'
+        end
+
+        if zsel = 'S' then zsel = 'E'
+        Select
+          When zsel = 'B' then do
+            Address TSO 'OBrowse' mrgdir'/'mdsn
+            mstat = '*OBrowse'
+            'tbmod' zmergtbl
+          end
+          When zsel = 'E' then do
+            ofile = mrgdir'/'mdsn
+            if mrgtype = 1 then do
+              mrgfile = '/tmp/'userid()'.merge'
+              md = usssafe(mrgdir)
+              mdsns = usssafe(mdsn)
+              cmd = 'cd' md '&& cp' mdsns mrgfile
+              x = docmd(cmd)
+              parm = 'M'
+              'vput (mrgdir mdsn mrgfile) shared'
+              'Edit file(mrgfile) macro(zigimrgm) parm(parm)'
+              'Edit file(ofile) macro(zigimrgm)'
+              mstat = '*Edit'
+            end
+            else do
+              'Edit file(ofile) panel(zigiedit) macro(zigiem)'
+            end
+            if rc = 0 then do
+              file_changed = 1
+              zmcount = zmcount - 1
+              cmd = 'cd' mrgdir '&& git add' mdsn
+              x = docmd(cmd)
+              mstat = '*Updated'
+            end
+            'tbmod' zmergtbl
+            cmd = 'rm' mrgfile
+            x = docmd(cmd)
+          end
+          When zsel = 'V' then do
+            ofile = mrgdir'/'mdsn
+            'View file(ofile)'
+            mstat = '*View'
+            'tbmod' zmergtbl
+          end
+          Otherwise nop
+        end
+        zsel = null
+      end
+      'tbend' zmergtbl
+      zsel = null
+      if zmcount = 0 then do
+        call do_merge_conflict_rms
+        if fix_stats /= null
+        then do fs = 1 to words(fix_stats)
+          sfile = usssafe(word(fix_stats,fs))
+          wfile = translate(word(fix_stats,fs),' ','/')
+          wfile = subword(wfile,words(wfile))
+          pds = usssafe(pdshlqt'.'wfile)
+          Address TSO '%zigistat' "'"pds"'" sfile 'S'
+          x = docmd('cd' localrep'/'zigirep '&& git add' sfile)
+          if x > 0 then call view_std 'B'
+        end
+        cmd = 'cd' mrgdir '&& git commit -m "Resolve merge conflicts"'
+        x = docmd(cmd)
         Report_Header = 'Merge Report'
         delta_from = bname
         delta_to   = branch
@@ -5646,246 +5875,21 @@ Merge_it:
         end
         so.0 = save_so.0
         call check_delta
+        call update_repo_metadata
       end
       else do
-        mhit = 0
-        do im = 1 to so.0
-          if word(so.im,1) /= 'CONFLICT' then iterate
-          zcmd = 2
-          if pos('.zigi/',so.im) = 0  then do
-            mhit = 1
-            leave
-          end
-        end
-        /* Merge went fubar */
-        if mhit = 1 then
-        do forever
-          zcmd = null
-          call pfshow 'off'           /* make sure pfshow is off */
-          'Addpop row(4) column(6)'
-          'Display Panel(zigimrgq)'
-          drc = rc
-          'Rempop'
-          call pfshow 'reset'         /* restore pfshow setting */
-          if drc > 0 then leave
-          if zcmd > 0 then leave
-          if zcmd = 0 then do
-            zerrsm = null
-            zerrlm = 'Issues with .zigi/xxx files can be ignored as they' ,
-              'will be handled automatically by ZIGI.'
-            'setmsg msg(isrz003)'
-            call view_std 'V'
-          end
-        end
-        if drc > 0 then zcmd = 3
-        if zcmd = 3 then do
-          cmd = 'cd' localdir
-          cmd = cmd '&& git merge --abort'
-          x = docmd(cmd)
-          zerrsm = 'Canceled.'
-          zerrlm = "Merge canceled and git merge --abort executed."
-          'setmsg msg(isrz003)'
-        end
-        mrgtype = zcmd
-        if zcmd = 2 then zcmd = 1
-        /* --------------------------------------------------------------- *
-        | If option 1 then setup for the user to resolve the conflicts    |
-        | using ispf edit.                                                |
-        |                                                                 |
-        | 1. parse merge conflict messages for the merge files            |
-        | 2. if a file is a PDS then process then add the file name       |
-        |    to fix_stats for later and edit to retain only merge records |
-        | 3. display the files for selection and correction               |
-        | 4. if ALL files have been resolved (edit saved) then            |
-        |    process any fix_stats files:                                 |
-        |    - run zigistat 'S'                                           |
-        |    - git add it                                                 |
-        |                                                                 |
-        | If option 1 then don't do any processing just display the       |
-        | files for editing and manual resolution.  But still fix the     |
-        | ISPF stats files                                                |
-        * --------------------------------------------------------------- */
-        if zcmd = 1 then do
-          pdshlqt = translate(pdshlq,' ','.')
-          if qualignr > 0 then
-          pdshlqt = subword(pdshlqt,1,qualignr)
-          pdshlqt = translate(pdshlqt,'.',' ')
-          parse value '' with dsntbl mstat
-          zmergtbl = 'ZG'time('s')
-          zmcount = 0
-          fix_stats = null
-          'TBCreate' zmergtbl 'Keys(mdsn)' ,
-            'Names(mfile mstat) nowrite share'
-          mrgdir = localrep'/'zigirep
-          merge_rms = null
-          do si = 1 to so.0
-            mem = null
-            if word(so.si,1) /= 'CONFLICT' then iterate
-            Select
-              When pos('rename/',word(so.si,2)) > 0 then
-              parse value so.si with . '->'mdsn .
-              When pos('/delete',word(so.si,2)) > 0 then do
-                parse value so.si with . 'Version'. 'of' mdsn .
-                merge_rms = merge_rms mdsn
-                iterate
-              end
-              When pos('modify/',word(so.si,2)) > 0 then
-              parse value so.si with . 'Version'. 'of' mdsn .
-              Otherwise
-              parse value so.si with 'CONFLICT' . 'in' mdsn .
-            End
-            mfile = mrgdir'/'mdsn
-            if mdsn /= '.zigi/dsn' then
-            if left(mdsn,6) = '.zigi/' then do
-              if pos(mfile,fix_stats) = 0 then
-              fix_stats = fix_stats mfile
-              parm = 'M'
-              'vput (mrgdir mdsn mfile) shared'
-              'Edit file(mfile) macro(zigimrgm) parm(parm)'
-              iterate
-            end
-            if wordpos(mdsn,dsntbl) > 0
-            then do
-              'tbmod' zmergtbl
-            end
-            else do
-              'tbadd' zmergtbl
-              dsntbl = dsntbl mdsn
-              zmcount = zmcount + 1
-            end
-          end
-          if zmcount = 0 then do
-            zs1 = 'Merge conflicts will be automatically resolved,'
-            zs2 = 'issues with ISPF Stat Files only.'
-            call do_popup
-          end
-          ztdsels = 0
-          ztdtop = 1
-          zsel = null
-          file_changed = 0
-          drop so. se.
-          'tbtop' zmergtbl
-          'tbsort' zmergtbl 'fields(mdsn,c,a)'
-          if zmcount > 0 then
-          do forever
-            if ztdsels > 1
-            then 'tbdispl' zmergtbl
-            else do
-              'tbtop' zmergtbl
-              'tbskip' zmergtbl 'number('ztdtop')'
-              'tbdispl' zmergtbl 'panel(zigimrds)'
-            end
-            if rc > 4 then leave
-            if zsel = null then iterate
-            if row /= null then do
-              'tbtop' zmergtbl
-              'tbskip' zmergtbl  'number('row')'
-            end
-            if zsel = '/' then do
-              call pfshow 'off'           /* make sure pfshow is off */
-              'Addpop row(4) column(6)'
-              'Display Panel(zigirmrg)'
-              'rempop'
-              call pfshow 'reset'         /* restore pfshow setting */
-            end
-
-            if ztdsels = 0 then
-            if pnsdef = 'P' then do
-              if row = 0 then zcmd = 'O'
-              if row > 0 then zsel = '/'
-            end
-
-            if zsel = 'S' then zsel = 'E'
-            Select
-              When zsel = 'B' then do
-                Address TSO 'OBrowse' mrgdir'/'mdsn
-                mstat = '*OBrowse'
-                'tbmod' zmergtbl
-              end
-              When zsel = 'E' then do
-                ofile = mrgdir'/'mdsn
-                if mrgtype = 1 then do
-                  mrgfile = '/tmp/'userid()'.merge'
-                  md = usssafe(mrgdir)
-                  mdsns = usssafe(mdsn)
-                  cmd = 'cd' md '&& cp' mdsns mrgfile
-                  x = docmd(cmd)
-                  parm = 'M'
-                  'vput (mrgdir mdsn mrgfile) shared'
-                  'Edit file(mrgfile) macro(zigimrgm) parm(parm)'
-                  'Edit file(ofile) macro(zigimrgm)'
-                  mstat = '*Edit'
-                end
-                else do
-                  'Edit file(ofile) panel(zigiedit) macro(zigiem)'
-                end
-                if rc = 0 then do
-                  file_changed = 1
-                  zmcount = zmcount - 1
-                  cmd = 'cd' mrgdir '&& git add' mdsn
-                  x = docmd(cmd)
-                  mstat = '*Updated'
-                end
-                'tbmod' zmergtbl
-                cmd = 'rm' mrgfile
-                x = docmd(cmd)
-              end
-              When zsel = 'V' then do
-                ofile = mrgdir'/'mdsn
-                'View file(ofile)'
-                mstat = '*View'
-                'tbmod' zmergtbl
-              end
-              Otherwise nop
-            end
-            zsel = null
-          end
-          'tbend' zmergtbl
-          zsel = null
-          if zmcount = 0 then do
-            call do_merge_conflict_rms
-            if fix_stats /= null
-            then do fs = 1 to words(fix_stats)
-              sfile = usssafe(word(fix_stats,fs))
-              wfile = translate(word(fix_stats,fs),' ','/')
-              wfile = subword(wfile,words(wfile))
-              pds = usssafe(pdshlqt'.'wfile)
-              Address TSO '%zigistat' "'"pds"'" sfile 'S'
-              x = docmd('cd' localrep'/'zigirep '&& git add' sfile)
-              if x > 0 then call view_std 'B'
-            end
-            cmd = 'cd' mrgdir '&& git commit -m "Resolve merge conflicts"'
-            x = docmd(cmd)
-            Report_Header = 'Merge Report'
-            delta_from = bname
-            delta_to   = branch
-            drop so.
-            do mi = 1 to save_so.0
-              so.mi = save_so.mi
-            end
-            so.0 = save_so.0
-            call check_delta
-            call update_repo_metadata
-          end
-          else do
-            zs1 = 'Not all conflicts have been resolved.'
-            zs2 = 'Merge request is now aborted.'
-            zs3 = null
-            zs4 = 'Press Enter to exit merge.'
-            call do_popup4p
-            cmd = 'cd' localdir
-            cmd = cmd  '&& git merge --abort'
-            x = docmd(cmd)
-            call view_std 'B'
-          end
-        end
+        zs1 = 'Not all conflicts have been resolved.'
+        zs2 = 'Merge request is now aborted.'
+        zs3 = null
+        zs4 = 'Press Enter to exit merge.'
+        call do_popup4p
+        cmd = 'cd' localdir
+        cmd = cmd  '&& git merge --abort'
+        x = docmd(cmd)
+        call view_std 'B'
       end
-      leave
     end
   end
-  'tbend' rtbm
-  ztdsels = 1
-  zsel = null
   return
 
   /* -------------------------------------------------------- *
