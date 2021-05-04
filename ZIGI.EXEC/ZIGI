@@ -5473,7 +5473,7 @@ Do_Merge:
   end
   save_so.0 = so.0
   /* ----------------------------------------- */
-  cmd = 'cd 'localdir' && git merge' mrgopt bname
+  cmd = 'cd 'localdir' && git merge --no-edit' mrgopt bname
   x = docmd(cmd)
   if so.1 = 'Already up-to-date.' then do
     /* No need to merge! */
