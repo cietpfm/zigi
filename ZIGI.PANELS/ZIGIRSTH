@@ -11,7 +11,7 @@
 +Enter Selection:_z+
 +
 +]BRanch+ (B)+ Create a new branch from stash
-+]Diff+   (D)+ Show the diff's for the stash
++]Diff+   (DI)+ Show the diff's for the stash
 +]Pop+    (P)+ Restore a stash
 +]Remove+ (R)+ Remove (Drop) the stash
 +]Show+   (S)+ Show stash summary
@@ -27,10 +27,10 @@
  &remove  = 'Remove'
  &show    = 'Show'
 )Proc
- ver (&zsel,list,B,D,R,P,S)
+ ver (&zsel,list,B,DI,R,P,S)
 )PNTS
   Field(branch ) var(zsel) val('B')
-  Field(diff   ) var(zsel) val('D')
+  Field(diff   ) var(zsel) val('DI')
   Field(remove ) var(zsel) val('R')
   Field(pop    ) var(zsel) val('P')
   Field(show   ) var(zsel) val('S')
