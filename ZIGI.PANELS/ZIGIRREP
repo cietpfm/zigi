@@ -14,7 +14,7 @@
 +]Add+    (A)+ Add the dataset/file to the git Index
 +]Browse+ (B)+ Browse the dataset/file
 +]Edit+   (E)+ Edit the dataset/file
-+]Diff+   (D)+ Show the Diff's
++]Diff+   (DI)+Show the Diff's
 +]History+(H)+ Display Commit History
 +]Remove+ (RM)+Remove the dataset/file
 +]Rename+ (RN)+Rename the dataset/file
@@ -40,11 +40,11 @@
 )Proc
  if (&zsel = 'E')
      &zsel = 'S'
- ver (&zsel,list,A,B,D,E,H,RM,RN,V,S,U)
+ ver (&zsel,list,A,B,DI,E,H,RM,RN,V,S,U)
 )PNTS
   Field(add    ) var(zsel) val('A')
   Field(browse ) var(zsel) val('B')
-  Field(diff   ) var(zsel) val('D')
+  Field(diff   ) var(zsel) val('DI')
   Field(edit   ) var(zsel) val('S')
   Field(history) var(zsel) val('H')
   Field(select ) var(zsel) val('S')
