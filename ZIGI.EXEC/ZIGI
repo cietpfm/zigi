@@ -1687,169 +1687,11 @@ WWR_handle_pull:
     x = docmd(cmd)
     rev_head = so.1    /* save the current commit hash */
 
-    cmd = 'cd' localdir' && git pull -v'
+    cmd = 'cd' localdir' && git fetch'
     x = docmd(cmd)
     if x > 0 then call view_std 'B'
-    parse value '' with pulldsns pullmems. deletes.
-    deletes.0 = 0
-    pulled = 0
-    do pi = 1 to so.0
-      if left(so.pi,1) /= ' ' then iterate
-      if pos(' changed,',so.pi) > 0 then do
-        pullmsg = so.pi
-        pulled = 1
-        iterate
-      end
-      if word(so.pi,1) = 'rename' then do
-        if pos('/',so.pi) > 0 then do
-          parse value so.pi with . dd'/{'dm '=>' nm'}' .
-          dc = deletes.0 + 1
-          deletes.dc = strip(dd)'/'strip(dm)
-          deletes.0 = dc
-          if wordpos(dd,pulldsns) = 0 then do
-            pulldsns = pulldsns dd
-            pullmems.dd = nm
-          end
-          else pullmems.dd = pullmems.dd nm
-        end
-        else do
-          parse value so.pi with . dd '=>' nd .
-          dc = deletes.0 + 1
-          deletes.dc = strip(dd)
-          deletes.0 = dc
-          if wordpos(nd,pulldsns) = 0 then
-          pulldsns = pulldsns nd
-        end
-      end
-      if word(so.pi,1) = 'delete' then
-      if word(so.pi,2) = 'mode' then do
-        delds = word(so.pi,4)
-        dhit = 1
-        if left(delds,1) = '.' then dhit = 0
-        if dhit = 1 then do
-          dc = deletes.0 + 1
-          if pos('/',delds) > 0 then do
-            parse value delds with dd'/'dm
-            if pos('.',dm) > 0 then do
-              parse value dm with dm'.'.
-              delds = dd'/'translate(dm)
-            end
-          end
-          deletes.dc = delds
-          deletes.0 = dc
-          if pos('/',delds) = 0 then do
-            wp = wordpos(delds,pulldsns)
-            pulldsns = delword(pulldsns,wp,1)
-          end
-          else do
-            parse value delds with dd'/'dm
-            ext = zdsn.dd
-            if ext = null
-            then wp = wordpos(dm,pullmems.dd)
-            else do
-              dm = lower(dm'.'ext)
-              wp = wordpos(dm,pullmems.dd)
-            end
-            pullmems.dd = delword(pullmems.dd,wp,1)
-          end
-        end
-      end
-      if left(so.pi,5) = 'From' then leave
-      pidsn = word(so.pi,1)
-      if left(pidsn,1) = '.' then iterate
-      parse value pidsn with pidsn'/'pimem
-      if wordpos(pidsn,pulldsns) = 0 then do
-        pulldsns = pulldsns pidsn
-        pullmems.pidsn = pimem
-      end
-      else pullmems.pidsn = pullmems.pidsn pimem
-    end
-    /* ------------------------------------------------- *
-    | Validate all the Pulldsns and remove if not valid |
-    * ------------------------------------------------- */
-    do ip = words(pulldsns) to 1 by -1
-      w = word(pulldsns,ip)
-      if dsnvalid(w) = 'OK' then iterate
-      pulldsns = delword(pulldsns,ip,1)
-    end
-    /* create the ispf variable with member names for
-    the dataset using the dataset offset in pulldsns
-    for the variable suffix */
-    if qualignr = 0
-    then delhlq = pdshlq
-    else do
-      delhlq = translate(pdshlq,' ','.')
-      if qualignr /= '*' then
-      delhlq = subword(delhlq,1,qualignr)
-      delhlq = translate(delhlq,'.',' ')
-    end
-    do zz = 1 to words(pulldsns)
-      zd = word(pulldsns,zz)
-      zw = words(pullmems.zd)
-      ldsn = "'"delhlq"."zd"'"
-      x = listdsi(ldsn "dir")
-      /* check if a PDSE and bypass the full Replace or if not
-      a PDSE then check of more than 25% of members being
-      updated and if so then nullify the member list so a full
-      Replace will occur for the dataset */
-      if x = 0 then
-      if sysmembers /= null then
-      if sysadirblk /= 'NO_LIM' then
-      if sysmembers/zw < 4 then pullmems.zd = ''
-      interpret 'zv'zz '= (pullmems.zd)'
-      'vput zv'zz
-    end
-    if pulldsns /= null then do
-      call Replace localrep zigirep pdshlq qualignr pulldsns
-      if replace_state = 1 then do
-        call reverse_pull
-        return
-      end
-      'Verase pulldsns Both'
-      call outtrap 'x.'
-      if deletes.0 > 0 then do dc = 1 to deletes.0
-        if pos('/',deletes.dc) = 0
-        then do
-          delds =  "'"pdshlq"."deletes.dc"'"
-          dm.dc = delds
-          Address TSO 'Delete' delds
-          cmd = 'cd' localrep'/'zigirep
-          cmd = cmd '&& rm' deletes.dc
-        end
-        else do
-          parse value deletes.dc with delds'/'mem
-          if pos('.',mem) > 0
-          then parse value mem with m'.'.
-          else m = mem
-          dm.dc = "'"pdshlq"."delds"("m")'"
-          call delete_member "'"pdshlq"."delds"'" m
-          cmd = 'cd' localrep'/'zigirep'/'delds
-          cmd = cmd '&& rm' mem
-          x = docmd(cmd)
-        end
-      end
-      call outtrap 'off'
-      do id = 1 to deletes.0
-        so.id = 'Deleted:' dm.id
-      end
-      so.0 = deletes.0
-      se.0 = 0
-      call view_std
-      call update_repo_metadata
-    end
-    else do
-      if pulled = 0 then do
-        zerrsm = 'Nothing'
-        zerrlm = 'Nothing to pull.'
-        'setmsg msg(isrz003)'
-      end
-      else call update_repo_metadata
-    end
-    if pulled > 0 then do
-      zerrsm = 'Successful.'
-      zerrlm = left('Pull was a success.',76) pullmsg
-      'setmsg msg(isrz003)'
-    end
+
+    call do_merge 'origin/'branch, '--ff'
   end
   Return
 
@@ -5606,7 +5448,7 @@ Merge_it:
     | Checkout the selected bname   |
     * ----------------------------- */
     if zsel = "M" then do
-      call do_merge
+      call do_merge bname, '--no-ff'
       leave
     end
   end
@@ -5616,6 +5458,7 @@ Merge_it:
   return
 
 Do_Merge:
+  parse arg bname, mrgopt
   /* ----------------------------------------- */
   /* Get the delta of the elements between the */
   /* branches being merged.                    */
@@ -5630,8 +5473,7 @@ Do_Merge:
   end
   save_so.0 = so.0
   /* ----------------------------------------- */
-  cmd = 'cd 'localdir' && git merge --no-commit --no-ff'
-  cmd = cmd || ' refs/heads/'bname
+  cmd = 'cd 'localdir' && git merge' mrgopt bname
   x = docmd(cmd)
   if so.1 = 'Already up-to-date.' then do
     /* No need to merge! */
@@ -5642,11 +5484,8 @@ Do_Merge:
     call do_popup4p
     return
   end
-  parse var se.1 "Automatic merge went well; stopped" rest
-  if rest /= "" then do
+  if x = 0 then do
     /* No issues. Commit the merge then execute a Replace */
-    /* Maybe popup a panel here for the commit message? */
-    x = docmd('cd 'localdir' && git commit -m "Merge 'bname'"')
     Report_Header = 'Merge Report'
     delta_from = bname
     delta_to   = branch
@@ -8114,19 +7953,6 @@ check_clean:
   clast = so.0
   if pos('working tree clean',so.clast) > 0 then return 'YES'
   else return "NO"
-
-  /* -------------------------------------------------------- *
-  | This is where the most recent pull will be reversed.     |
-  |                                                          |
-  | The reverse will use the last hash saved in: rev_head    |
-  * -------------------------------------------------------- */
-Reverse_Pull:
-  cmd = 'cd' localrep'/'zigirep
-  cmd = cmd '&& git reset --hard' rev_head
-  cmd = cmd '&& git status'
-  x = docmd(cmd)
-  call view_std 'B'
-  return
 
 flowselect:
   /* ----------------------------- *
