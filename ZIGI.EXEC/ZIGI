@@ -1490,7 +1490,7 @@ Work_With_Repo:
     * -------------------------------- */
     if zsel /= null then
     Select
-      when zsel = 'D' then call WWR_handle_lcmd_d
+      when zsel = 'DI' then call WWR_handle_lcmd_di
       When zsel = 'H' then call WWR_handle_lcmd_h
       When zsel = 'B' then call WWR_handle_lcmd_b
       When zsel = 'V' then call WWR_handle_lcmd_v
@@ -2416,7 +2416,7 @@ WWR_handle_flowend:
   /* -------------------------------- *
   | Show the diff for the file       |
   * -------------------------------- */
-WWR_handle_lcmd_d:
+WWR_handle_lcmd_di:
   dtest = 0
   if left(fulldsn,1) = "'" then do
     x = listdsi(fulldsn)
@@ -2907,7 +2907,7 @@ Work_with_repo_file:
           end
           when zsel = 'I'  then call WWRF_handle_lcmd_i
           When zsel = 'U' then call do_undo 'M'
-          When zsel = 'D' then call WWRF_handle_lcmd_d
+          When zsel = 'DI' then call WWRF_handle_lcmd_di
           When zsel = 'Z' then call WWRF_handle_lcmd_z
           Otherwise do
             zerrsm = 'Invalid.'
@@ -3446,7 +3446,7 @@ WWRF_handle_lcmd_ab:
   /* -------------------------------- *
   | Show the diff for the member     |
   * -------------------------------- */
-WWRF_handle_lcmd_d:
+WWRF_handle_lcmd_di:
   d = usssafe(dsn)
   cmd = 'cd' localrep'/'zigirep'/'d
   m = usssafe(mem)
@@ -4068,7 +4068,7 @@ Stash_List:
         x = docmd(cmd)
         call view_std 'B'
       end
-      When zsel = 'D' then do   /* show diff */
+      When zsel = 'DI' then do   /* show diff */
         cmd = 'cd' localrep'/'zigirep
         cmd = cmd '&& git stash show -p' stashid
         x = docmd(cmd)

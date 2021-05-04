@@ -13,7 +13,7 @@
   %A+ Add the member to the%Git index+so that it can be Committed
   %AB+Add the member in binary to the%Git index+so that it can be Committed
   %AF+For Add to override a previous Git Ignore
-  %D+ Compares the uncommited version to the current version using git diff
+  %DI+ Compares the uncommited version to the current version using git diff
   %H+ History - view previous version of the PDS member
   %I+ Git Ignore the member
   %RM+Remove the member from the PDS and the repository

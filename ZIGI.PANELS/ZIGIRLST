@@ -16,7 +16,7 @@
 +]AddForce+(AF)+Add an ignored member to the Git Index
 +]Browse+  (B)+ Browse the dataset/file
 +]Edit+    (E)+ Edit the dataset/file
-+]Diff+    (D)+ Show the Diff's
++]Diff+    (DI)+Show the Diff's
 +]History+ (H)+ Display Commit History
 +]Ignore+  (I)+ Git Ignore the Member
 +]Remove+  (RM)+Remove the element
@@ -58,13 +58,13 @@ lower:
  &select  = 'Select'
  &undo    = 'Undo'
 )Proc
- ver (&zsel,list,A,AB,AF,B,E,D,H,I,RM,RN,S,U,V)
+ ver (&zsel,list,A,AB,AF,B,E,DI,H,I,RM,RN,S,U,V)
 )PNTS
   Field(add    )  var(zsel) val('A')
   Field(addbin )  var(zsel) val('AB')
   Field(addforce) var(zsel) val('AF')
   Field(browse )  var(zsel) val('B')
-  Field(diff   )  var(zsel) val('D')
+  Field(diff   )  var(zsel) val('DI')
   Field(edit   )  var(zsel) val('S')
   Field(select )  var(zsel) val('S')
   Field(history)  var(zsel) val('H')
