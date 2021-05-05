@@ -5660,21 +5660,13 @@ Branch_it:
       /* ----------------------------- *
       | Create this new branch, switch|
       * ----------------------------- */
-      bad = 0
-      do bi = 1 to bl.0
-        if newb = bl.bi then bad = 1
-      end
-      if bad = 1 then do
-        zerrsm = 'Invalid.'
-        zerrlm = newb 'branch already exists - select a new name.'
-        'setmsg msg(isrz003)'
-      end
-      else do
-        localdir = localrep'/'zigirep
-        x = docmd('cd 'localdir' && git checkout -b "'newb'"')
+      localdir = localrep'/'zigirep
+      x = docmd('cd 'localdir' && git checkout -b "'newb'"')
+      if x = 0 then do
         branch = newb
         leave
       end
+      call view_std 'B'
     end
     /* ----------------------------- *
     | Checkout the selected bname   |
