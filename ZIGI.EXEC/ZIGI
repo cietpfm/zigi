@@ -5440,7 +5440,7 @@ Branch_it:
       end
       else do
         localdir = localrep'/'zigirep
-        x = docmd('cd 'localdir' && git checkout -b 'newb)
+        x = docmd('cd 'localdir' && git checkout -b "'newb'"')
         branch = newb
         leave
       end
