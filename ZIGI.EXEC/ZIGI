@@ -4922,6 +4922,7 @@ Clone_Repo:
     zigidate = date('n')
     call set_sortdate
     'tbadd zigirepo order'
+    zpush = defcpush
     'vget (defrsort srr src srp srl) profile'
     'TBSort zigirepo Fields('defrsort')'
     'TBSAVE zigirepo REPLCOPY LIBRARY('isptabl')'
